@@ -6,7 +6,14 @@
 package testgpx2;
 
 import java.io.File;
+import java.text.DecimalFormat;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.stage.FileChooser;
 import javax.xml.bind.JAXBContext;
@@ -18,6 +25,7 @@ import jgpx.model.analysis.TrackData;
 import jgpx.model.gpx.Track;
 import jgpx.model.jaxb.GpxType;
 import jgpx.model.jaxb.TrackPointExtensionT;
+import jgpx.util.DateTimeUtils;
 
 /**
  *
@@ -29,6 +37,7 @@ public class Presenter {
     private File file;
     private TrackData trackData;
     private ObservableList<Chunk> chunks;
+    private DecimalFormat decimalFormatter = new DecimalFormat(".##");
 
     public Presenter() {
     }
@@ -60,8 +69,30 @@ public class Presenter {
 
     }
 
-    public XYChart.Series getProfileSerie(boolean distanceAsBase) {
-        if (distanceAsBase) {
+    public String getFileName() {
+        String name = file.getName();
+        name = name.replace('+', ' ');
+        name = name.replace('_', ' ');
+        name = name.substring(0, name.length() - 4);
+        return name;
+
+    }
+
+    public XYChart.Series getProfileSerie(boolean timeAsBase) {
+        if (timeAsBase) {
+
+            XYChart.Series profileSerie = new XYChart.Series();
+            double time = 0.0;
+            double elevation = 0.0;
+            for (int i = 0; i < chunks.size(); i++) {
+                profileSerie.getData().add(new XYChart.Data(time, elevation));
+                time += ((double) chunks.get(i).getDuration().getSeconds() / 60.0);
+                elevation += chunks.get(i).getAscent();
+                elevation -= chunks.get(i).getDescend();
+            }
+            return profileSerie;
+
+        } else {
             XYChart.Series profileSerie = new XYChart.Series();
             double distance = 0.0;
             double elevation = 0.0;
@@ -72,13 +103,20 @@ public class Presenter {
                 elevation -= chunks.get(i).getDescend();
             }
             return profileSerie;
-        } else {
-            return null;
         }
     }
 
-    XYChart.Series getVelocitySerie(boolean distanceAsBase) {
-        if (!distanceAsBase) {
+    public XYChart.Series getVelocitySerie(boolean timeAsBase) {
+        if (timeAsBase) {
+            XYChart.Series velocitySerie = new XYChart.Series();
+            double time = 0;
+            for (int i = 0; i < chunks.size(); i++) {
+                velocitySerie.getData().add(new XYChart.Data(time, chunks.get(i).getSpeed()));
+                time += ((double) chunks.get(i).getDuration().getSeconds() / 60.0);
+            }
+            return velocitySerie;
+
+        } else {
             XYChart.Series velocitySerie = new XYChart.Series();
             double distance = 0.0;
             for (int i = 0; i < chunks.size(); i++) {
@@ -86,16 +124,131 @@ public class Presenter {
                 distance += chunks.get(i).getDistance();
             }
             return velocitySerie;
-        } else {
-            System.out.print("AUDYHJNAOPFLKÀOSDKÀKD");
-            XYChart.Series velocitySerie = new XYChart.Series();
-            double time = 0;
-            for (int i = 0; i < chunks.size(); i++) {
-                velocitySerie.getData().add(new XYChart.Data(time, chunks.get(i).getSpeed()));
-                time += ((double)chunks.get(i).getDuration().getSeconds()/3600.0);
-            }
-            return velocitySerie;
         }
+    }
+
+    public String getDate() {
+        return DateTimeUtils.format(trackData.getStartTime());
+
+    }
+
+    public String getDuration() {
+        Duration duration = trackData.getTotalDuration();
+        long seconds = duration.getSeconds();
+        long minutes = seconds / 60;
+        long hours = seconds / 3600;
+        return hours + ":" + (minutes - hours * 60) + ":" + (seconds - minutes * 60);
+    }
+
+    public String getTimeInMovement() {
+        return DateTimeUtils.format(trackData.getMovingTime());
+    }
+
+    public String getTotalDistance() {
+        return decimalFormatter.format(trackData.getTotalDistance()) + "m";
+    }
+
+    public String getCumulativeAltitude() {
+        return "Ascenso: " + decimalFormatter.format(trackData.getTotalAscent()) + "m.  Descenso: " + decimalFormatter.format(trackData.getTotalDescend()) + "m.";
+    }
+
+    public String getMaxVelocity() {
+        return decimalFormatter.format(trackData.getMaxSpeed()) + "m/s";
+    }
+
+    public String getMedVelocity() {
+        return decimalFormatter.format(trackData.getAverageSpeed()) + "m/s";
+    }
+
+    public String getMaxFC() {
+        return trackData.getMaxHeartrate() + "";
+    }
+
+    public String getMedFC() {
+        return "" + trackData.getAverageHeartrate();
+    }
+
+    public String getMinFC() {
+        return "" + trackData.getMinHeartRate();
+    }
+
+    public String getMaxCadence() {
+        return "" + trackData.getMaxCadence();
+    }
+
+    public String getMedCandence() {
+        return "" + trackData.getAverageCadence();
+    }
+
+    public XYChart.Series getFCSeries(boolean timeAsBase) {
+        if (timeAsBase) {
+            XYChart.Series fCSeries = new XYChart.Series();
+            double time = 0.0;
+            for (int i = 0; i < chunks.size(); i++) {
+                fCSeries.getData().add(new XYChart.Data(time, chunks.get(i).getAvgHeartRate()));
+                time += (double)chunks.get(i).getDuration().getSeconds() / 60.0;
+            }
+            return fCSeries;
+        } else {
+            XYChart.Series fCSeries = new XYChart.Series();
+            double distance = 0.0;
+            for (int i = 0; i < chunks.size(); i++) {
+                fCSeries.getData().add(new XYChart.Data(distance, chunks.get(i).getAvgHeartRate()));
+                distance += chunks.get(i).getDistance();
+            }
+            return fCSeries;
+        }
+    }
+
+    public XYChart.Series getCadenceSeries(boolean timeAsBase) {
+        if (timeAsBase) {
+            XYChart.Series cadenceSeries = new XYChart.Series();
+            double time = 0.0;
+            for (int i = 0; i < chunks.size(); i++) {
+                cadenceSeries.getData().add(new XYChart.Data(time, chunks.get(i).getAvgCadence()));
+                time += (double)chunks.get(i).getDuration().getSeconds() / 60.0;
+            }
+            return cadenceSeries;
+        } else {
+            XYChart.Series cadenceSeries = new XYChart.Series();
+            double distance = 0.0;
+            for (int i = 0; i < chunks.size(); i++) {
+                cadenceSeries.getData().add(new XYChart.Data(distance, chunks.get(i).getAvgCadence()));
+                distance += chunks.get(i).getDistance();
+            }
+            return cadenceSeries;
+        }
+    }
+
+    public ObservableList<PieChart.Data> getZonesData() {
+        int z1 = 0, z2 = 0, z3 = 0, z4 = 0, z5 = 0;
+        double hearthRate;
+        double maxHearthRate = trackData.getMaxHeartrate();
+
+        for (int i = 0; i < chunks.size(); i++) {
+            hearthRate = chunks.get(i).getAvgHeartRate();
+            if (hearthRate < (maxHearthRate * 0.6)) {
+                z1++;
+            } else if (hearthRate < (maxHearthRate * 0.7)) {
+                z2++;
+            } else if (hearthRate < (maxHearthRate * 0.8)) {
+                z3++;
+            } else if (hearthRate < (maxHearthRate * 0.9)) {
+                z4++;
+            } else {
+                z5++;
+            }
+        }
+        int totalObservations = z1 + z2 + z3 + z4 + z5;
+        ObservableList<PieChart.Data> pieChartData
+                = FXCollections.observableArrayList(
+                        new PieChart.Data("Recuperación", ((double) z1) / ((double) totalObservations)),
+                        new PieChart.Data("Fondo", ((double) z2) / ((double) totalObservations)),
+                        new PieChart.Data("Tempo", ((double) z3) / ((double) totalObservations)),
+                        new PieChart.Data("Umbral", ((double) z4) / ((double) totalObservations)),
+                        new PieChart.Data("Anaeróbico", ((double) z5) / ((double) totalObservations))
+                );
+        return pieChartData;
     }
 
 }

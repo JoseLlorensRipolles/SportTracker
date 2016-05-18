@@ -1,0 +1,9 @@
+Make sure that no-one press combined charts menu check boxes when charts still not loaded
+Disable chekBoxes while loading charts
+Make sure that all timeasbase checkboxes work if selected pre-load button
+Put names to the charts and series.
+Check units 
+Loading stage quile loading gpx
+Change coursours while loading charts ?
+Thread in hande checkmenuitem or checkbox in combinedChart
+Implement Notofications and errors when changing base while series still loading

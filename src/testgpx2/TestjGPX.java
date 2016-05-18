@@ -21,7 +21,7 @@ public class TestjGPX extends Application {
     
     @Override
     public void start(Stage stage) throws Exception {
-        BorderPane root = (BorderPane) FXMLLoader.load(getClass().getResource("OneActivityView.fxml"));
+        BorderPane root = (BorderPane) FXMLLoader.load(getClass().getResource("/testgpx2/views/OneActivityView.fxml"));
         
         Scene scene = new Scene(root);
         
